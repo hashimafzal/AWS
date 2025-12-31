@@ -1,0 +1,107 @@
+# ECS
+
+- Two main launch types (and then there is EKS):
+    - **EC2:**
+        - You launch ECS tasks on EC2 cluster
+        - You must **provision and maintain EC2 instances**.
+        - Each EC2 instance runs a special "**ECS Agent**" to register as an instance to the EC2 Cluster.
+        - The EC2s in the cluster have a special IAM role so that the agent can access aws services needed to run properly (ECS, ECR, Cloudwatch logs, Secrets Manager, etc).
+        -  **If you terminate a container instance while it is in the STOPPED state, that container instance isn't automatically removed from the cluster.** You will need to **deregister** your container instance in the STOPPED state by using the Amazon ECS console or AWS Command Line Interface. Once deregistered, the container instance will no longer appear as a resource in your Amazon ECS cluster.
+        - If you terminate a RUNNING container instance with a connected Amazon ECS container agent, the agent automatically deregisters the instance from your cluster. However, if you terminate a STOPPED container instance with disconnected agents, the container instance isn't automatically removed from the cluster.
+        - Then each Task running on the cluster will have a ECS task role. **You can create specific roles for each task** (so each task can access other AWS services)
+        - Support to use EFS as shared filesystem (s3 not supported)
+        - **To integrate to ALB by using dynamic port mapping** we need to remember to **leave host to determine port mapping to a random port in the task definition**. Remember to let all traffic coming from your ALB into your EC2 instances (by allowing any port from ALBs SG).
+        - **Task Placement**:
+            - Where to place a particular Task with constraints of CPU, Memory or Ports.
+            - You define a **task placement** strategy and **task placement constraints**
+            - Steps:
+                - Identify the instances that satisfy the CPU, memory and port requirements of task definition
+                - Identify the instances that satisfy the task placement constraints.
+                - Identify the instance that satisfies the task placement strategy the best.
+            - Task placement Strategies:
+                - **Binpack**: Based on the least available amount of CPU and RAM. You **minimize number of instances** (fill one before creating another instance).
+                - **Random**: Place randomly
+                - **Spread**: Spread across based on a particular variable (like AZs or instance id).
+            - Task placement Constraints:
+                - **"distincInstance"**: Each task on different container instance
+                - **"memberOf"**: places on instance that satisfy an expression formulated in Cluster Query Language (eg: specify instance type you want to run the task).
+    - **Fargate:**
+        - No EC2 management
+        - **Serverless**
+        - AWS runs it based on CPU and RAM needed.
+        - You just create task definitions and run the.
+        - Each Task running on the cluster will have a ECS task role. You can create specific roles for each task (so each task can access other AWS services)
+        - Support ALB. Each task gets a unique private IP so you only need to define the container ports (host port is not applicable)
+        - Support to use EFS as shared filesystem (s3 not supported)
+- **Auto Scaling:**
+    - **Automatically increase/decrease number o tasks**
+    - Common metrics:
+        - CPU utilization
+        - Average memory utilization
+        - ALB request count per target
+    - Scale policies:
+        - **Target tracking**: Increase or decrease the number of tasks that your service runs based on a **target value** for a specific metric. This is similar to the way that your thermostat maintains the temperature of your home. You select temperature and the thermostat does the rest.
+        - **Step Scaling**: Increase or decrease the number of tasks that your service runs **based on a set of scaling adjustments**, known as step adjustments, that **vary based on the size of the alarm breach.**
+        - **Scheduled Scaling**: Increase or decrease the number of tasks that your service runs **based on the date and time.**
+    - Remember ECS Autoscaling != EC2 Auto Scaling. Thats why its much easier to scale tasks using fargate (you don't worry about EC2 scaling when new tasks need to be ran). If you are with EC2 launch type then
+        - Run EC2 instances manually
+        - Scale based on EC2 CPU utilization
+        - Use **ECS Cluster Capacity Provider**: **Automatically scale EC2 instances.** The capacity provider is paired with the ASG to scale instances. Recommended way of doing it (if you cant use Fargate. Fargate launch type is always recommended).
+- **Rolling Update**:
+    - When updating app with no down time we can control how many tasks can be started and stopped, and in which order.
+    - You define a **min capacity and max capacity**. The **update will terminate instances until min capacity is met and then create new versions of app until max is met.** After that it will repeat the process until all tasks are updated to new version.
+- Solutions Architectures:
+    - Serverless image processing steps:
+        - User uploads image to S3
+        - Event is sent to Event bridge
+        - Event bridge starts new task in fargate (with the necessary role) that reads image from s3 and writes to DynamoDB.
+        - Then its all shut down.
+    - Scheduled processing:
+        - Event bridge creates task every x hours
+        - Task performs batch operation on S3 bucket
+        - Then its all shut down.
+    - Process SQS queue by launching more tasks to process faster.
+- Task Definitions
+    - JSON based
+    - Image name
+    - Port binding
+    - Memory and CPU required
+    - **Env variables: You can reference SSM Parameter Store, Secrets Manager or do a bulk load with S3.**
+    - IAM roles
+    - Logging configurations
+- You can define **up to 10 containers in a task definition**.
+- There is One IAM role per task definition
+- **ECS Data Volumes** (Bind mounts):
+    - Works both for EC2 Launch Type and Fargate.
+    - **All containers in a Task definition share same data**
+    - If using EC2 launch type, the data respects the EC2 lifecycle since it uses EC2s instance storage.
+    - If you are using Fargate, then data respects the container(s) lifecycles.
+    - A typical pattern it to share data between an app container and a logging sidecar container.
+- **ECS Services:** An Amazon ECS **service allows you to run and maintain a specified number of instances of a task definition simultaneously in an Amazon ECS cluster**. If any of your tasks should fail or stop for any reason, the Amazon ECS service scheduler launches another instance of your task definition to replace it in order to maintain the desired number of tasks in the service. In addition to maintaining the desired number of tasks in your service, you can optionally run your service behind a load balancer. The load balancer distributes traffic across the tasks that are associated with the service.
+- ECR
+    - Store and manage docker images on AWS
+    - Public or private
+    - Pulling from ECR
+        - `$(aws ecr get-login --no-include-email)`: **retrieves a token that is valid for a specified registry for 12 hours, and then it prints a docker login command with that authorization token.** You can execute the printed command to log in to your registry with Docker, or just run it automatically using the $() command wrapper. After you have logged in to an Amazon ECR registry with this command, you can use the Docker CLI to push and pull images from that registry until the token expires
+        - `docker pull 1234567890.dkr.ecr.eu-west-1.amazonaws.com/demo:latest`: The docker pull command is used to pull an image from the ECR registry. 
+- EKS
+    - Managed Kubernetes Cluster
+    - EKS **supports EC2 launch types** if you want to manage your own cluster or **fargate for a serverless fashion**
+    - Kubernetes is cloud-agnostic.
+
+- [Task placement](https://aws.amazon.com/es/blogs/compute/amazon-ecs-task-placement/)
+    - You can think of this flow as a funnel with filters for your instances. Constraints must be obeyed. If an instance doesn’t fit, it isn’t used. Strategies are then used to sort the rest of the instances by preference to determine which are the “best.”
+    ![ECS Task placement](../media/ecs-task-placement.png)
+
+- You can apply task placement strategies and constraints to customize how Amazon ECS places and terminates tasks. Task placement strategies and constraints are not supported for tasks using the Fargate launch type. By default, Fargate tasks are spread across Availability Zones.
+
+- **Cluster queries are expressions that enable you to group objects**. This feature is **used in conjunction with Task placement constraints**. For example, you can group container instances by attributes such as Availability Zone, instance type, or custom metadata. You can add custom metadata to your container instances, known as attributes. Each attribute has a name and an optional string value. You can use the built-in attributes provided by Amazon ECS or define custom attributes. After you have defined a group of container instances, you can customize Amazon ECS to place tasks on container instances based on group. Running tasks manually is ideal in certain situations. For example, suppose that you are developing a task but you are not ready to deploy this task with the service scheduler. Perhaps your task is a one-time or periodic batch job that does not make sense to keep running or restart when it finishes. To do this you use the [Cluster Query Language](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-query-language.html). Ej:
+    - The following expression selects instances with the specified instance type: `attribute:ecs.instance-type == t2.small`
+    - The following expression selects instances in the us-east-1a or us-east-1b Availability Zone: `attribute:ecs.availability-zone in [us-east-1a, us-east-1b]`
+    - The following expression selects G2 instances that aren't in the us-east-1d Availability Zone: `attribute:ecs.instance-type =~ g2.* and attribute:ecs.availability-zone != us-east-1d`
+    - The following expression selects instances that are hosting tasks in the service:production group: `task:group == service:production`
+    - The following expression selects instances that aren't hosting tasks in the database group: `not(task:group == database)`
+    - The following expression selects instances that are only running one task: `runningTasksCount == 1`
+    - The following expression selects instances that are running a container agent version below 1.14.5: `agentVersion < 1.14.5`
+    - The following expression selects instances that were registered before February 13, 2018: `registeredAt < 2018-02-13`
+    - The following expression selects instances with the following Amazon EC2 instance IDs: `ec2InstanceId in ['i-abcd1234', 'i-wxyx7890']`
