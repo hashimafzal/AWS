@@ -1,0 +1,35 @@
+# Aurora
+
+- **MySQL and Postgres support**.
+- Key feature is that it **grows automatically at 10 GB increments up to 64TB**.
+- Cloud optimized DB solution (high availability, read scaling, replication)
+- +20% cost compared to RDS.
+- It stores **6 copies of your data across 3 AZs**.
+    - When you perform a write operation, it saves 6 copies of it in 3 AZs.
+- Its **multi-AZ just like RDS** (i.e, uses the same logic). It has **one master for reads and writes and then maintains up to 15 RR**.   The Aurora Replicas can be **distributed across the Availability Zones** that a DB cluster **spans within an AWS Region**. Replication process takes sub 10ms lag.
+- It **also supports Cross-region replication** (ONLY FOR MYSQL, if you use other one go for Aurora Global).
+    - If instance is Aurora, it does not support cross-region replication
+    - You can create an **Aurora read replica of an Aurora MySQL DB cluster in a different AWS Region**, **by using MySQL binary log (binlog) replication**. Each cluster can have up to five read replicas created this way, each in a different Region.
+    - Aurora **PostgreSQL doesn't support cross-Region Aurora Replicas**. 
+- A RR can become Master in case of failover. Failover takes less than 30 seconds.
+- **Aurora has read and write endpoints to abstract clients from the actual Masters and RR DBs**. You could connect individually to each DGB but using the endpoint is the recommended way.
+    - Write endpoint points to master db
+    - Read Replica: Its a load balancer to spread connections to read replicas.
+- Option for **authentication using IAM tokens** (exactly as RDS).
+- Aurora uses **"backtracks" to restore data at any point in time instead of "backups"**.
+- Security: Idem RDS.
+- Aurora can provide up to five times the performance of MySQL and up to three times the performance of PostgreSQL
+- Aurora involves a cluster of DB instances. Each connection is handled by a specific DB instance.
+- **Other types of endpoint**s (besides read and write endpoints):
+    - **Custom endpoint**: You can make them refer to specific DB instances of your choosing.
+    - **Instance endpoints**: Connect to specific instance. **Masters and RR all have instance endpoints for direct connection** (buy its not the preferred way, use read/write endpoints instead for production).
+- Aurora Shared storage architecture **makes your data independent form the DB instances in the cluster**. You can remove an instance form the cluster without removing any underlying data. Only when you delete the whole cluster is when all data is deleted.
+- **Aurora Serverless**: You **define min/max "aurora capacity units"** and it scales automatically in a serverless fashion. An ACU is made up of both RAM and CPU. Good for infrequent, intermittent or unpredictable workloads.
+- **Global Aurora**: 
+    - **Alternative to Cross-region RR**.
+    - It has a **primary DB cluster in one region and up to 5 secondary db clusters in different regions**.
+    - You issue write operations directly to primary db cluster in primary region.
+    - Aurora **replicates data to secondary regions using dedicated infrastructure**.
+    - Designed for **apps with world wide footprints**.
+    - RR are close to users and by using write forwarding you can also configure an Aurora MySql based global DB so that secondary clusters send data to primary.
+    - If you would like to ensure you have a database available in another region if a disaster happened to main region. The ideal DB to use here is Aurora Global since it supports cross region replication.

@@ -1,0 +1,11 @@
+# Cloud Development Kit (CDK)
+
+- Define **cloud infra using familiar code**
+- Code is **compiled into a CF template**
+- Code is typically **type safe** so you can catch errors beforehand (not like yaml that is no type safe)
+- The standard AWS CDK development workflow is similar to the workflow you're already familiar as a developer. There are a few extra steps:
+    - **Create the app from a template** provided by AWS CDK - Each AWS CDK app should be in its own directory, with its own local module dependencies. Create a new directory for your app. Now initialize the app using the cdk init command, specifying the desired template ("app") and programming language. The cdk init command creates a number of files and folders inside the created home directory to help you organize the source code for your AWS CDK app.
+    - Add code to the app to create resources within stacks - **Add custom code as is needed for your application.**
+    - **Build the app (optional)** - In most programming environments, after making changes to your code, you'd build (compile) it. This isn't strictly necessary with the AWS CDK—the Toolkit does it for you so you can't forget. But you can still build manually whenever you want to catch syntax and type errors.
+    - **Synthesize one or more stacks in the app to create an AWS CloudFormation template** - Synthesize one or more stacks in the app to create an AWS CloudFormation template. The synthesis step catches logical errors in defining your AWS resources. If your app contains more than one stack, you'd need to specify which stack(s) to synthesize.
+    - **Deploy one or more stacks to your AWS account** - It is optional (though good practice) to synthesize before deploying. The AWS CDK synthesizes your stack before each deployment. If your code has security implications, you'll see a summary of these and need to confirm them before deployment proceeds. cdk deploy is used to deploy the stack using CloudFormation templates. This command displays progress information as your stack is deployed. When it's done, the command prompt reappears.
