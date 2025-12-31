@@ -1,0 +1,80 @@
+# RDS
+
+- Relational database service
+- Use SQL to query
+- Support for: Postgres, MySQL, MariaDB, Oracle, MSSQL and Aurora (which is a proprietary AWS DB).
+- Strong backup support ios given to us with RDS
+- Snapshots != Backups: The fists is manually triggered by the user and has a longer retention. The second one are automated and have up to 35 day retention.
+- RDS has auto scaling. If you are running out of memory it scales automatically.
+    - Can also be done manually
+    - Scaling storage usually doesn't cause any outage or performance degradation of the DB instance. 
+    - With storage autoscaling enabled, when Amazon RDS detects that you are running out of free database space it automatically scales up your storage. Amazon RDS starts a storage modification for an autoscaling-enabled DB instance when these factors apply:
+        - Free available space is less than 10 percent of the allocated storage.
+        - The low-storage condition lasts at least five minutes.
+        - At least six hours have passed since the last storage modification, or storage optimization has completed on the instance, whichever is longer.
+    - The additional storage is in increments of whichever of the following is greater:
+        - 5 GiB
+        - 10 percent of currently allocated storage
+        - Storage growth prediction for 7 hours based on the FreeStorageSpace metrics change in the past hour.
+    - The maximum storage threshold is the limit that you set for autoscaling the DB instance. 
+- Read Replicas:
+    - You can scale reads to your DBs.
+    - You have up to 5 RR within an AZ, Cross AZ or even cross region.
+    - You can deploy RR in different regions!
+    - RR are async: Eventually consistent reads.
+    - In AWS there is a network cots when data goes from one AZ to another. If RDS RR runs within same region, you don't pay that fee.
+- RDS Multi-AZ:
+    - Used primarily for disaster recovery.
+    - We get a Master and a Standby in another AZ.
+    - Master and Standby perform a sync replication. Transactions going to master MUST pass in Standby before whole transaction can pass.
+    - Master and Standby share one DNS name, which enables automatic failover to standby db.
+    No one can read/write to standby db.
+    - Multi-AZ keeps the same connection string regardless of which database is up. Read Replicas o the other hand imp[ly we need to reference them individually in our application as each read replica will have its own DNS name.
+    - A Multi-AZ standby cannot serve read requests. Multi-AZ deployments are designed to provide enhanced database availability and durability, rather than read scaling benefits.
+    - RDS applies OS updates by performing maintenance on the standby, then promoting the standby to primary, and finally performing maintenance on the old primary, which becomes the new standby.
+    - When you modify the database engine for your DB instance in a Multi-AZ deployment, then Amazon RDS upgrades both the primary and secondary DB instances at the same time. In this case, the **database engine for the entire Multi-AZ deployment is shut down during the upgrade**.
+- You can setup RR as multi AZ!
+- From a RDS instance you can create a manual snapshot, restore one to a point i time and migrate the snapshot to another region.
+- Security:
+    - We have at rest encryption feature.
+        - Encrypt master and RR 
+        - This has to be defined at launch time. If master is not encrypted, then master cannot be encrypted.
+        - Simply encrypts your Amazon RDS DB instances and snapshots at rest. It doesn't automatically encrypt data before it is written to storage, nor automatically decrypt data when it is read from storage (if this is needed use Transparent Data Encryption (TDE) see below).
+    - We have in-flight encryption:
+        - Uses SSL certificates
+        - You can force users to use SSL.
+    - Taking snapshot of encrypted DB is encrypted snapshot.
+    - Taking snapshot of un-encrypted DB is un-encrypted by default. If you want to encrypt it you need to make a copy of it and encrypt it. The result is an encrypted RDS snapshot.
+    - RDS databases are typically ran inside a private subnet. **Security works by leveraging SGs**, which control what IPs or SGs can access the DB.
+    - With IAM policies you can control who can MANAGE RDS. But for simple access to the DB itself you have two options: Use traditional username and password from the DB or use IAM-bases authentication (**supported for MySQL, MariaDB and PostgreSQL**).
+        - For IAM based access you don't need a password. You just need an authentication token obtained through IAM & RDS API calls. Once you have that token which expires after 15 minutes, you can securely connect to the DB (using SSL and by passing the auth token). If you hade an EC2 instance the same applies: You would attach a role to the instance which would access auth token to connect to DB.
+        - Another benefit of using this is that Network traffic to and from the database is encrypted using Secure Socket Layer (SSL) or Transport Layer Security (TLS). 
+- Remember that Disaster Recovery != Replication: 
+    - One is associated with the concepts of standbys in a different AZ, sync replication and a shared DNS with master.
+    - The other with Read Replicas, async replication where each has its own DNS name.
+- A "DB instance" is an isolated database environment in AWS Cloud. Your "instance" can contain multiple user-created databases. You access them by using the same tools and apps they you use with a standalone database instance.
+- Disaster recovery:    
+    - Use **cross-Region Read Replicas**: In addition to using Read Replicas to reduce the load on your source DB instance, you can also use Read Replicas to implement a DR solution for your production DB environment. If the source DB instance fails, you can promote your Read Replica to a standalone source server. **Read Replicas can also be created in a different Region** than the source database. Using a cross-Region Read Replica can help ensure that you get back up and running if you experience a regional availability issue.
+    - Enable the **automated backup feature of Amazon RDS in a multi-AZ deployment** that **creates backups in a single AWS Region**: Amazon RDS provides high availability and failover support for DB instances using Multi-AZ deployments. Amazon RDS uses several different technologies to provide failover support. Multi-AZ deployments for MariaDB, MySQL, Oracle, and PostgreSQL DB instances use Amazon's failover technology. The automated backup feature of Amazon RDS enables **point-in-time recovery for your database instance**. Amazon RDS will backup your database and transaction logs and store both for a user-specified retention period. If it’s a Multi-AZ configuration, backups occur on the standby to reduce I/O impact on the primary. **Automated backups are limited to a single AWS Region while manual snapshots and Read Replicas are supported across multiple Regions**.
+
+- Because read replicas can be promoted to master status, they are useful as part of a **sharding implementation**. To shard your database, add a read replica and promote it to master status, then, from each of the resulting DB Instances, delete the data that belongs to the other shard.
+
+- **Transparent Data (TDE)**:
+    - Encrypt stored data on your DB instances running Microsoft SQL Server. TDE automatically encrypts data before it is written to storage, and automatically decrypts data when the data is read from storage.
+    - Transparent data encryption for SQL Server provides encryption key management by using a two-tier key architecture. A certificate, which is generated from the database master key, is used to protect the data encryption keys. The database encryption key performs the actual encryption and decryption of data on the user database. Amazon RDS backs up and manages the database master key and the TDE certificate. To comply with several security standards, Amazon RDS is working to implement automatic periodic master key rotation.
+
+- Monitoring
+    - You can monitor metrics such as the following:
+        - Network throughput
+        - Client connections
+        - I/O for read, write, or metadata operations
+        - Burst credit balances for your DB instances
+    - Monitoring tools
+        - Amazon CloudWatch metrics for Amazon RDS
+        - Amazon RDS Performance Insights and operating-system monitoring
+    - **Enhanced Monitoring**
+        - You can **monitor the operating system of your DB** instance in real time. When you want to see how different processes or threads use the CPU, Enhanced Monitoring metrics are useful.
+        - **CW vs Enhanced Monitoring**: A hypervisor creates and runs virtual machines (VMs). Using a hypervisor, an instance can support multiple guest VMs by virtually sharing memory and CPU. CloudWatch gathers metrics about CPU utilization from the hypervisor for a DB instance. In contrast, Enhanced Monitoring gathers its metrics from an agent on the DB instance. You might find differences between the CloudWatch and Enhanced Monitoring measurements, because the hypervisor layer performs a small amount of work. The differences can be greater if your DB instances use smaller instance classes. In this scenario, more virtual machines (VMs) are probably managed by the hypervisor layer on a single physical instance.
+        - By default, Enhanced Monitoring metrics are stored for 30 days in the CloudWatch Logs (Charges are based on CloudWatch Logs data transfer and storage rates).
+    - Take note as well that you do not have direct access to the instances/servers of your RDS database instance, unlike with your EC2 instances where you can install a CloudWatch agent or a custom script to get CPU and memory utilization of your instance.
+    - 
