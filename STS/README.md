@@ -1,0 +1,28 @@
+# STS
+
+- Web service that enables you to request temporary, limited-privilege credentials for AWS Identity and Access Management (IAM) users or for users you authenticate (federated users). 
+-  By default, AWS STS is a global service with a single endpoint at https://sts.amazonaws.com. However, you can also choose to make AWS STS API calls to endpoints in any other supported Region. This can reduce latency (server lag) by sending the requests to servers in a Region that is geographically closer to you.
+- Many organizations maintain more than one AWS account. Using roles and cross-account access, you can define user identities in one account, and use those identities to access AWS resources in other accounts that belong to your organization. This is known as the delegation approach to temporary access. 
+- Many organizations maintain more than one AWS account. Using roles and cross-account access, you can define user identities in one account, and use those identities to access AWS resources in other accounts that belong to your organization. This is known as the delegation approach to temporary access.
+- APIs: 
+    - AssumeRole
+    - AssumeRoleWithSAML
+        - Returns a set of temporary security credentials for users who have been authenticated via a SAML authentication response.
+    - AssumeRoleWithWebIdentity
+        - Returns a set of temporary security credentials for users who have been authenticated in a mobile or web application with a web identity provider. Example providers include the OAuth 2.0 providers Login with Amazon and Facebook, or any OpenID Connect-compatible identity provider such as Google.
+    - DecodeAuthorizationMessage: 
+        - Decodes additional information about the authorization status of a request from an encoded message returned in response to an AWS request. 
+        - For example, if a user is not authorized to perform an operation that he or she has requested, the request returns a Client.UnauthorizedOperation response (an HTTP 403 response). Some AWS operations additionally return an encoded message that can provide details about this authorization failure. 
+        - The message is encoded because the details of the authorization status can contain privileged information that the user who requested the operation should not see. To decode an authorization status message, a user must be granted permissions through an IAM policy to request the DecodeAuthorizationMessage(sts:DecodeAuthorizationMessage) action.
+    - GetAccessKeyInfo: 
+        - Access keys consist of two parts: an access key ID (for example, AKIAIOSFODNN7EXAMPLE) and a secret access key (for example, wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY)
+        - When you pass an access key ID to this operation, it returns the ID of the AWS account to which the keys belong. 
+        - Access key IDs beginning with AKIA are long-term credentials for an IAM user or the AWS account root user. Access key IDs beginning with ASIA are temporary credentials that are created using AWS STS operations. 
+    - GetCallerIdentity
+        - Returns details about the IAM user or role whose credentials are used to call the operation.
+    - GetFederationToken
+        - Returns a set of temporary security credentials (consisting of an access key ID, a secret access key, and a security token) for a federated user. 
+    - GetSessionToken:
+        - Returns a set of temporary credentials for an AWS account or IAM user. 
+        - Returns: AccessID, Secret key, Session Token, Expiration date
+- **Credentials** that are created by using account credentials can range from **900 seconds (15 minutes) up to a maximum of 3,600 seconds (1 hour), with a default of 1 hour**. Hence you need to renew the credentials post expiry.
